@@ -1,4 +1,4 @@
-# Install script for directory: F:/ESP_Projects/Example_Connect+Demo
+# Install script for directory: E:/ESP_Projects/Example_Connect+Demo
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -39,7 +39,7 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
-  include("F:/ESP_Projects/Example_Connect+Demo/build/esp-idf/cmake_install.cmake")
+  include("E:/ESP_Projects/Example_Connect+Demo/build/esp-idf/cmake_install.cmake")
 endif()
 
 if(CMAKE_INSTALL_COMPONENT)
@@ -50,5 +50,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "F:/ESP_Projects/Example_Connect+Demo/build/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "E:/ESP_Projects/Example_Connect+Demo/build/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")

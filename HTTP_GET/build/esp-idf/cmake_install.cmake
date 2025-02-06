@@ -264,6 +264,11 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
+  include("E:/ESP_Projects/HTTP_GET/build/esp-idf/esp32-camera/cmake_install.cmake")
+endif()
+
+if(NOT CMAKE_INSTALL_LOCAL_ONLY)
+  # Include the install script for the subdirectory.
   include("E:/ESP_Projects/HTTP_GET/build/esp-idf/esp_adc/cmake_install.cmake")
 endif()
 

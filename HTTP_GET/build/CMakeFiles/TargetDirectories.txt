@@ -425,6 +425,13 @@ E:/ESP_Projects/HTTP_GET/build/esp-idf/esp-tls/CMakeFiles/list_install_component
 E:/ESP_Projects/HTTP_GET/build/esp-idf/esp-tls/CMakeFiles/install.dir
 E:/ESP_Projects/HTTP_GET/build/esp-idf/esp-tls/CMakeFiles/install/local.dir
 E:/ESP_Projects/HTTP_GET/build/esp-idf/esp-tls/CMakeFiles/install/strip.dir
+E:/ESP_Projects/HTTP_GET/build/esp-idf/esp32-camera/CMakeFiles/__idf_esp32-camera.dir
+E:/ESP_Projects/HTTP_GET/build/esp-idf/esp32-camera/CMakeFiles/edit_cache.dir
+E:/ESP_Projects/HTTP_GET/build/esp-idf/esp32-camera/CMakeFiles/rebuild_cache.dir
+E:/ESP_Projects/HTTP_GET/build/esp-idf/esp32-camera/CMakeFiles/list_install_components.dir
+E:/ESP_Projects/HTTP_GET/build/esp-idf/esp32-camera/CMakeFiles/install.dir
+E:/ESP_Projects/HTTP_GET/build/esp-idf/esp32-camera/CMakeFiles/install/local.dir
+E:/ESP_Projects/HTTP_GET/build/esp-idf/esp32-camera/CMakeFiles/install/strip.dir
 E:/ESP_Projects/HTTP_GET/build/esp-idf/esp_adc/CMakeFiles/__idf_esp_adc.dir
 E:/ESP_Projects/HTTP_GET/build/esp-idf/esp_adc/CMakeFiles/edit_cache.dir
 E:/ESP_Projects/HTTP_GET/build/esp-idf/esp_adc/CMakeFiles/rebuild_cache.dir

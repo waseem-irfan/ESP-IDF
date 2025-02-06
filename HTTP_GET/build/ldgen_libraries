@@ -38,6 +38,7 @@ E:/ESP_Projects/HTTP_GET/build/esp-idf/cmock/libcmock.a
 E:/ESP_Projects/HTTP_GET/build/esp-idf/console/libconsole.a
 E:/ESP_Projects/HTTP_GET/build/esp-idf/http_parser/libhttp_parser.a
 E:/ESP_Projects/HTTP_GET/build/esp-idf/esp-tls/libesp-tls.a
+E:/ESP_Projects/HTTP_GET/build/esp-idf/esp32-camera/libesp32-camera.a
 E:/ESP_Projects/HTTP_GET/build/esp-idf/esp_adc/libesp_adc.a
 E:/ESP_Projects/HTTP_GET/build/esp-idf/esp_eth/libesp_eth.a
 E:/ESP_Projects/HTTP_GET/build/esp-idf/esp_gdbstub/libesp_gdbstub.a

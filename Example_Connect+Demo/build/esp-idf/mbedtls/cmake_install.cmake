@@ -1,4 +1,4 @@
-# Install script for directory: C:/Espressif/frameworks/esp-idf-v5.1.1/components/mbedtls
+# Install script for directory: C:/Espressif/frameworks/esp-idf-v5.1.2/components/mbedtls
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -39,6 +39,6 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
-  include("F:/ESP_Projects/Example_Connect+Demo/build/esp-idf/mbedtls/mbedtls/cmake_install.cmake")
+  include("E:/ESP_Projects/Example_Connect+Demo/build/esp-idf/mbedtls/mbedtls/cmake_install.cmake")
 endif()
 

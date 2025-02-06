@@ -1,4 +1,4 @@
-# Install script for directory: C:/Espressif/frameworks/esp-idf-v5.1.1/components/mqtt
+# Install script for directory: C:/Espressif/frameworks/esp-idf-v5.1.2/components/mqtt
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

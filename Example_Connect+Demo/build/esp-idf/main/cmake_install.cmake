@@ -1,4 +1,4 @@
-# Install script for directory: F:/ESP_Projects/Example_Connect+Demo/main
+# Install script for directory: E:/ESP_Projects/Example_Connect+Demo/main
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
