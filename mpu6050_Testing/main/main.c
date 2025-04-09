@@ -1,140 +1,94 @@
-#include "driver/i2c.h"
-#include "esp_log.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
+#include <stdio.h>
 #include <math.h>
+#include "unity.h"
+#include "driver/i2c.h"
+#include "mpu6050.h"
+#include "esp_system.h"
+#include "esp_log.h"
 
-#include "sdkconfig.h"
+#define I2C_MASTER_SCL_IO 22
+#define I2C_MASTER_SDA_IO 21
+#define I2C_MASTER_NUM I2C_NUM_0
+#define I2C_MASTER_FREQ_HZ 100000
 
-#define PIN_SDA 21
-#define PIN_CLK 22
-#define I2C_ADDRESS 0x68 // I2C address of MPU6050
+static const char *TAG = "mpu6050_orientation";
+static mpu6050_handle_t mpu6050 = NULL;
 
-#define MPU6050_ACCEL_XOUT_H 0x3B
-#define MPU6050_PWR_MGMT_1   0x6B
-#define ACCEL_SENSITIVITY 16384.0
-#define GRAVITY 9.81
-#define TIME_STEP 0.01
+// Complementary filter constant
+#define ALPHA 0.98
 
-/*
- * The following registers contain the primary data we are interested in
- * 0x3B MPU6050_ACCEL_XOUT_H
- * 0x3C MPU6050_ACCEL_XOUT_L
- * 0x3D MPU6050_ACCEL_YOUT_H
- * 0x3E MPU6050_ACCEL_YOUT_L
- * 0x3F MPU6050_ACCEL_ZOUT_H
- * 0x50 MPU6050_ACCEL_ZOUT_L
- * 0x41 MPU6050_TEMP_OUT_H
- * 0x42 MPU6050_TEMP_OUT_L
- * 0x43 MPU6050_GYRO_XOUT_H
- * 0x44 MPU6050_GYRO_XOUT_L
- * 0x45 MPU6050_GYRO_YOUT_H
- * 0x46 MPU6050_GYRO_YOUT_L
- * 0x47 MPU6050_GYRO_ZOUT_H
- * 0x48 MPU6050_GYRO_ZOUT_L
- */
+static void i2c_bus_init(void) {
+    i2c_config_t conf = {
+        .mode = I2C_MODE_MASTER,
+        .sda_io_num = (gpio_num_t)I2C_MASTER_SDA_IO,
+        .sda_pullup_en = GPIO_PULLUP_ENABLE,
+        .scl_io_num = (gpio_num_t)I2C_MASTER_SCL_IO,
+        .scl_pullup_en = GPIO_PULLUP_ENABLE,
+        .master.clk_speed = I2C_MASTER_FREQ_HZ,
+        .clk_flags = I2C_SCLK_SRC_FLAG_FOR_NOMAL
+    };
 
-static char tag[] = "mpu6050";
+    esp_err_t ret = i2c_param_config(I2C_MASTER_NUM, &conf);
+    TEST_ASSERT_EQUAL_MESSAGE(ESP_OK, ret, "I2C config error");
 
-#undef ESP_ERROR_CHECK
-#define ESP_ERROR_CHECK(x)   do { esp_err_t rc = (x); if (rc != ESP_OK) { ESP_LOGE("err", "esp_err_t = %d", rc); assert(0 && #x);} } while(0);
+    ret = i2c_driver_install(I2C_MASTER_NUM, conf.mode, 0, 0, 0);
+    TEST_ASSERT_EQUAL_MESSAGE(ESP_OK, ret, "I2C install error");
+}
 
-void task_mpu6050(void *ignore) {
-	ESP_LOGD(tag, ">> mpu6050");
-	i2c_config_t conf;
-	conf.mode = I2C_MODE_MASTER;
-	conf.sda_io_num = PIN_SDA;
-	conf.scl_io_num = PIN_CLK;
-	conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
-	conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
-	conf.master.clk_speed = 100000;
-	ESP_ERROR_CHECK(i2c_param_config(I2C_NUM_0, &conf));
-	ESP_ERROR_CHECK(i2c_driver_install(I2C_NUM_0, I2C_MODE_MASTER, 0, 0, 0));
+static void i2c_sensor_mpu6050_init(void) {
+    esp_err_t ret;
 
-	i2c_cmd_handle_t cmd;
-	vTaskDelay(200/portTICK_PERIOD_MS);
+    i2c_bus_init();
+    mpu6050 = mpu6050_create(I2C_MASTER_NUM, MPU6050_I2C_ADDRESS);
+    TEST_ASSERT_NOT_NULL_MESSAGE(mpu6050, "MPU6050 create NULL");
 
-	cmd = i2c_cmd_link_create();
-	ESP_ERROR_CHECK(i2c_master_start(cmd));
-	ESP_ERROR_CHECK(i2c_master_write_byte(cmd, (I2C_ADDRESS << 1) | I2C_MASTER_WRITE, 1));
-	i2c_master_write_byte(cmd, MPU6050_ACCEL_XOUT_H, 1);
-	ESP_ERROR_CHECK(i2c_master_stop(cmd));
-	i2c_master_cmd_begin(I2C_NUM_0, cmd, 1000/portTICK_PERIOD_MS);
-	i2c_cmd_link_delete(cmd);
+    ret = mpu6050_config(mpu6050, ACCE_FS_4G, GYRO_FS_500DPS);
+    TEST_ASSERT_EQUAL(ESP_OK, ret);
 
-	cmd = i2c_cmd_link_create();
-	ESP_ERROR_CHECK(i2c_master_start(cmd));
-	ESP_ERROR_CHECK(i2c_master_write_byte(cmd, (I2C_ADDRESS << 1) | I2C_MASTER_WRITE, 1));
-	i2c_master_write_byte(cmd, MPU6050_PWR_MGMT_1, 1);
-	i2c_master_write_byte(cmd, 0, 1);
-	ESP_ERROR_CHECK(i2c_master_stop(cmd));
-	i2c_master_cmd_begin(I2C_NUM_0, cmd, 1000/portTICK_PERIOD_MS);
-	i2c_cmd_link_delete(cmd);
+    ret = mpu6050_wake_up(mpu6050);
+    TEST_ASSERT_EQUAL(ESP_OK, ret);
+}
 
+void app_main(void) {
+    esp_err_t ret;
+    uint8_t mpu6050_deviceid;
+    mpu6050_acce_value_t acce;
+    mpu6050_gyro_value_t gyro;
 
-	uint8_t data[14];
+    float roll = 0.0f, pitch = 0.0f;
+    const float dt = 0.1f; // 100ms sampling time
 
-	double accel_x;
-	double accel_y;
-	double accel_z;
-	double vel_x = 0, vel_y = 0, vel_z = 0;
-    double pos_x = 0, pos_y = 0, pos_z = 0;
+    i2c_sensor_mpu6050_init();
 
-	while(1) {
-		// Tell the MPU6050 to position the internal register pointer to register
-		// MPU6050_ACCEL_XOUT_H.
-		cmd = i2c_cmd_link_create();
-		ESP_ERROR_CHECK(i2c_master_start(cmd));
-		ESP_ERROR_CHECK(i2c_master_write_byte(cmd, (I2C_ADDRESS << 1) | I2C_MASTER_WRITE, 1));
-		ESP_ERROR_CHECK(i2c_master_write_byte(cmd, MPU6050_ACCEL_XOUT_H, 1));
-		ESP_ERROR_CHECK(i2c_master_stop(cmd));
-		ESP_ERROR_CHECK(i2c_master_cmd_begin(I2C_NUM_0, cmd, 1000/portTICK_PERIOD_MS));
-		i2c_cmd_link_delete(cmd);
+    ret = mpu6050_get_deviceid(mpu6050, &mpu6050_deviceid);
+    TEST_ASSERT_EQUAL(ESP_OK, ret);
+    TEST_ASSERT_EQUAL_UINT8_MESSAGE(MPU6050_WHO_AM_I_VAL, mpu6050_deviceid, "Wrong WHO_AM_I");
 
-		cmd = i2c_cmd_link_create();
-		ESP_ERROR_CHECK(i2c_master_start(cmd));
-		ESP_ERROR_CHECK(i2c_master_write_byte(cmd, (I2C_ADDRESS << 1) | I2C_MASTER_READ, 1));
+    while (1) {
+        ret = mpu6050_get_acce(mpu6050, &acce);
+        TEST_ASSERT_EQUAL(ESP_OK, ret);
 
-		ESP_ERROR_CHECK(i2c_master_read_byte(cmd, data,   0));
-		ESP_ERROR_CHECK(i2c_master_read_byte(cmd, data+1, 0));
-		ESP_ERROR_CHECK(i2c_master_read_byte(cmd, data+2, 0));
-		ESP_ERROR_CHECK(i2c_master_read_byte(cmd, data+3, 0));
-		ESP_ERROR_CHECK(i2c_master_read_byte(cmd, data+4, 0));
-		ESP_ERROR_CHECK(i2c_master_read_byte(cmd, data+5, 1));
+        ret = mpu6050_get_gyro(mpu6050, &gyro);
+        TEST_ASSERT_EQUAL(ESP_OK, ret);
 
-		//i2c_master_read(cmd, data, sizeof(data), 1);
-		ESP_ERROR_CHECK(i2c_master_stop(cmd));
-		ESP_ERROR_CHECK(i2c_master_cmd_begin(I2C_NUM_0, cmd, 1000/portTICK_PERIOD_MS));
-		i2c_cmd_link_delete(cmd);
-		// converting raw values in acceleration (m/s2)
-		accel_x = ((data[0] << 8) | data[1])/ ACCEL_SENSITIVITY * GRAVITY;
-		accel_y = ((data[2] << 8) | data[3])/ ACCEL_SENSITIVITY * GRAVITY;
-		accel_z = ((data[4] << 8) | data[5])/ ACCEL_SENSITIVITY * GRAVITY;
+        // --- Accelerometer-based angle calculation ---
+        float accel_roll  = atan2f(acce.acce_y, acce.acce_z) * 180.0f / M_PI;
+        float accel_pitch = atan2f(-acce.acce_x, sqrtf(acce.acce_y * acce.acce_y + acce.acce_z * acce.acce_z)) * 180.0f / M_PI;
 
-		// Integrate to get velocity (assuming small time step)
-        vel_x += accel_x * TIME_STEP;
-        vel_y += accel_y * TIME_STEP;
-        vel_z += accel_z * TIME_STEP;
+        // --- Gyroscope integration for angle ---
+        float gyro_roll_rate = gyro.gyro_x;  // degrees per second
+        float gyro_pitch_rate = gyro.gyro_y;
 
-        // Integrate again to get position (in meters)
-        pos_x += vel_x * TIME_STEP;
-        pos_y += vel_y * TIME_STEP;
-        pos_z += vel_z * TIME_STEP;
+        // --- Complementary Filter ---
+        roll  = ALPHA * (roll + gyro_roll_rate * dt) + (1 - ALPHA) * accel_roll;
+        pitch = ALPHA * (pitch + gyro_pitch_rate * dt) + (1 - ALPHA) * accel_pitch;
 
-        // Convert to cm
-        pos_x *= 100;
-        pos_y *= 100;
-        pos_z *= 100;
+        ESP_LOGI(TAG, "Roll: %.2f°, Pitch: %.2f°", roll, pitch);
 
-		ESP_LOGI(tag, "Displacement (cm): X=%.2f, Y=%.2f, Z=%.2f", accel_x, accel_y, accel_z);
+        vTaskDelay(pdMS_TO_TICKS(dt * 1000)); // Convert dt to milliseconds
+    }
 
-		vTaskDelay(500/portTICK_PERIOD_MS);
-	}
-
-	vTaskDelete(NULL);
-} // task_hmc5883l
-
-void app_main() {
-    ESP_LOGI("Main", "Starting MPU6050 Task...");
-    xTaskCreate(task_mpu6050, "mpu6050_task", 4096, NULL, 5, NULL);
+    mpu6050_delete(mpu6050);
+    ret = i2c_driver_delete(I2C_MASTER_NUM);
+    TEST_ASSERT_EQUAL(ESP_OK, ret);
 }
