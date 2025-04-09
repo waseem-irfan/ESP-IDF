@@ -15,7 +15,7 @@ static const char *TAG = "mpu6050_orientation";
 static mpu6050_handle_t mpu6050 = NULL;
 
 // Complementary filter constant
-#define ALPHA 0.99
+#define ALPHA 0.98
 
 static void i2c_bus_init(void) {
     i2c_config_t conf = {
@@ -55,8 +55,8 @@ void app_main(void) {
     mpu6050_acce_value_t acce;
     mpu6050_gyro_value_t gyro;
 
-    float roll = 0.0f, pitch = 0.0f;
-    const float dt = 0.1f; // 100ms sampling time
+    float roll = 0.0f, pitch = 0.0f, yaw = 0.0f;
+    const float dt = 0.1f; // 100ms
 
     i2c_sensor_mpu6050_init();
 
@@ -71,21 +71,29 @@ void app_main(void) {
         ret = mpu6050_get_gyro(mpu6050, &gyro);
         TEST_ASSERT_EQUAL(ESP_OK, ret);
 
-        // --- Accelerometer-based angle calculation ---
+        // --- Accelerometer-based Roll & Pitch ---
         float accel_roll  = atan2f(acce.acce_y, acce.acce_z) * 180.0f / M_PI;
         float accel_pitch = atan2f(-acce.acce_x, sqrtf(acce.acce_y * acce.acce_y + acce.acce_z * acce.acce_z)) * 180.0f / M_PI;
 
-        // --- Gyroscope integration for angle ---
-        float gyro_roll_rate = gyro.gyro_x;  // degrees per second
+        // --- Gyroscope rates (degrees per second) ---
+        float gyro_roll_rate  = gyro.gyro_x;
         float gyro_pitch_rate = gyro.gyro_y;
+        float gyro_yaw_rate   = gyro.gyro_z;
 
-        // --- Complementary Filter ---
-        roll  = ALPHA * (roll + gyro_roll_rate * dt) + (1 - ALPHA) * accel_roll;
-        pitch = ALPHA * (pitch + gyro_pitch_rate * dt) + (1 - ALPHA) * accel_pitch;
+        // --- Complementary Filter for Roll and Pitch ---
+        roll  = ALPHA * (roll + gyro_roll_rate * dt) + (1.0f - ALPHA) * accel_roll;
+        pitch = ALPHA * (pitch + gyro_pitch_rate * dt) + (1.0f - ALPHA) * accel_pitch;
 
-        ESP_LOGI(TAG, "Roll: %.2f°, Pitch: %.2f°", roll, pitch);
+        // --- Yaw Integration (no correction without magnetometer) ---
+        yaw += gyro_yaw_rate * dt;
 
-        vTaskDelay(pdMS_TO_TICKS(dt * 1000)); // Convert dt to milliseconds
+        // Keep yaw within 0-360
+        if (yaw >= 360.0f) yaw -= 360.0f;
+        if (yaw < 0.0f) yaw += 360.0f;
+
+        ESP_LOGI(TAG, "Roll: %.2f°, Pitch: %.2f°, Yaw: %.2f°", roll, pitch, yaw);
+
+        vTaskDelay(pdMS_TO_TICKS(dt * 1000));
     }
 
     mpu6050_delete(mpu6050);
