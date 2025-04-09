@@ -15,7 +15,7 @@ static const char *TAG = "mpu6050_orientation";
 static mpu6050_handle_t mpu6050 = NULL;
 
 // Complementary filter constant
-#define ALPHA 0.98
+#define ALPHA 0.99
 
 static void i2c_bus_init(void) {
     i2c_config_t conf = {
